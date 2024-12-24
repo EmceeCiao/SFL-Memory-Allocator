@@ -35,7 +35,9 @@ All the functions above provide the same interface as their counterparts in stdl
 
 SFL-Memory-Allocator can be built using the provided make files and running ```make clean && make all```. 
 
-The testing framework used was [criterion](https://github.com/Snaipe/Criterion), so this must be installed before attempting to run the tests using ```bin/sfmm_tests```
+The testing framework used was [criterion](https://github.com/Snaipe/Criterion), so this must be installed before attempting to run the tests using: 
+
+```bin/sfmm_tests```
 
 ## Acknowledgements 
 
