@@ -1,7 +1,4 @@
-/**
- * Do not submit your assignment with a main function in this file.
- * If you submit with a main function in this file, you will get a zero.
- */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,15 +18,9 @@
 #define GET_PREV_ALLOC(p) ((GET(p) & 0x8) >> 3) 
 #define MAX(x, y) ((x), > (y) ? (x) : (y) )  
 
-//NEED MORE MACROS: 
-//NEED NEXTBLKPTR 
-//NEED PREVBLKPTR 
-
 //globals
 int flag_initalized = 0; 
 int byte_alignment = 0;    
-//sf_block *prolouge = NULL; 
-//sf_block *epilouge = NULL;
 
 //Editing prev_alloc to 0 is just block->header &= ~0x8 
 //Editing prev_alloc to 1 is just block->header |= (1 <<3)  
@@ -87,9 +78,7 @@ sf_block * PREV_BLK_PTR(sf_block* curr_block_ptr){
     } 
     return prev_ptr; 
 }
-// size_t get_size(sf_block* curr_block_ptr){  
-//     return (*(unsigned long *)(curr_block_ptr) & ~0x1F);
-// } 
+
 sf_block* remove_from_free_list(sf_block* curr_ptr){ 
     sf_block* previous_node =  curr_ptr->body.links.prev; 
     sf_block* next_node = curr_ptr->body.links.next;   
@@ -98,9 +87,6 @@ sf_block* remove_from_free_list(sf_block* curr_ptr){
     return curr_ptr; 
 } 
 void add_to_free_list(sf_block *ptr, int index){  
-    //Need to have a check to see if it's wilderness block or not.  
-    //First we check if the block is the wilderness block,  
-    //None of the math matters just add to the index... and we add to the head so we will do 
     sf_block * sentinel = &sf_free_list_heads[index]; 
     sf_block * original_head = sentinel->body.links.next; 
     //We change our ptr to point next to orignal head and prev to sentinel 
@@ -108,34 +94,25 @@ void add_to_free_list(sf_block *ptr, int index){
     ptr->body.links.prev = sentinel; 
     original_head->body.links.prev = ptr; 
     sentinel->body.links.next = ptr; 
-    //abort(); 
 } 
 int determine_free_list_index(size_t size){ 
     size_t scaled_down = size/32; 
     int indx = 0; 
 	if(scaled_down == 1){ 
-        //debug("ADDING TO INDEX 0"); 
 		indx = 0; 
 	}else if(scaled_down == 2){ 
-        //debug("ADDING TO INDEX 1");  
 		indx = 1; 
 	}else if(scaled_down == 3){ 
-        //debug("ADDING TO INDEX 2"); 
 		indx = 2; 
 	}else if(scaled_down > 3 && scaled_down <= 5){ 
-        //debug("ADDING TO INDEX 3");
 		indx = 3; 
 	}else if(scaled_down > 5 && scaled_down <= 8){ 
-        //debug("ADDING TO INDEX 4"); 
 		indx = 4; 
 	}else if(scaled_down > 8 && scaled_down <= 13){  
-        //debug("ADDING TO INDEX 5"); 
 		indx = 5; 
 	}else if(scaled_down > 13 && scaled_down <= 21){ 
-        ////debug("ADDING TO INDEX 6"); 
 		indx = 6; 
 	}else if(scaled_down > 21){ 
-        ////debug("ADDING TO INDEX 7"); 
 		indx = 7; 
 	}
     return indx; 
@@ -147,7 +124,7 @@ void *initialize(){
         return NULL; 
     }   
     //Need to check alignment of the heap at the start, whether it be 16 or 32 byte aligned  
-    //If 32 bute aligned increment pointer by 24, 16 we do 8 
+    //If 32 byte aligned increment pointer by 24, 16 we do 8 
     if ((uintptr_t) ptr % 32 == 0){ 
         ptr += 24;  
         byte_alignment = 32; 
@@ -155,12 +132,12 @@ void *initialize(){
         ptr += 8;  
         byte_alignment = 16; 
     } 
-    //Now I need to place the prolouge for the first time  
+    //Now I need to place the prologue for the first time  
     PUT(ptr, PACK(32, 1, 0)); 
     ptr += 32; 
     //Now I want to place the header for the free block 
     PUT(ptr, PACK(1984, 0, 1));     
-    //Now I want to place the epilouge for the first time  
+    //Now I want to place the epilogue for the first time  
     void* epi_ptr = NULL;  
     if(byte_alignment == 16){ 
         epi_ptr = sf_mem_end() - 24; 
@@ -171,7 +148,7 @@ void *initialize(){
     PUT(epi_ptr, PACK(0, 1, 0)); 
     void* footer_ptr = epi_ptr - 8; 
     PUT(footer_ptr, PACK(1984, 0, 1));
-    //Now I want to do the free lists and intializing them so, this'll set up the sentinel nodes    
+    //Now I want to do the free lists and initializing them so, that'll set up the sentinel nodes    
     for(int i = 0; i < NUM_FREE_LISTS; i++){ 
         sf_free_list_heads[i].body.links.next = &sf_free_list_heads[i]; 
         sf_free_list_heads[i].body.links.prev = &sf_free_list_heads[i]; 
@@ -188,12 +165,9 @@ void *initialize(){
     //sf_show_heap(); 
     return (void *) ptr;  
 } 
-//NEEDS TO BE IMPLEMENTED  
 //ADAPTED FROM CSAPP FIGURE 9.46 
 sf_block *coalesce(sf_block * curr_block){ 
-    //NEED TO HANDLE ALL 4 CASES mentioned in the textbook...  
-    ////debug("PRINTING CURR_BLOCK PASSED IN\n"); 
-    //sf_show_block(curr_block); 
+    //Need to handle all 4 cases mentioned in the textbook...  
     size_t curr_block_size = curr_block->header & ~0x1F; 
     sf_block* prev = PREV_BLK_PTR(curr_block); 
     sf_block* next = NEXT_BLK_PTR(curr_block); 
@@ -202,10 +176,8 @@ sf_block *coalesce(sf_block * curr_block){
     prev_status = (curr_block->header & 0x8) >> 3; 
     next_status = (next->header & 0x10) >> 4; 
     size_t new_size = curr_block_size;    
-    ////debug("GETS PAST PREV_BLK_PTR AND NEXT_BLK_PTR IN COALESCE"); 
     if(prev_status && next_status){ 
         //Then curr_block remains curr_block and we keep it as is  
-        //debug("NO COALESCE NEEDED"); 
         curr_block = curr_block;  
         sf_block * curr_block_footer = (sf_block*)((char *)curr_block + new_size - 8);  
         curr_block_footer->header = curr_block -> header;  
@@ -215,7 +187,6 @@ sf_block *coalesce(sf_block * curr_block){
     else if(prev_status && !next_status){
         //then we need to coalesce with the next block and edit our header as well as footer 
         //Need to remove next from free_list  
-        //debug("NEXT COALESCE NEEDED"); 
         remove_from_free_list(next); 
         size_t next_size = next->header & ~0x1F; 
         new_size = next_size + curr_block_size;   
@@ -227,19 +198,12 @@ sf_block *coalesce(sf_block * curr_block){
         curr_block_nextHDR->header &= ~0x8;  
     }  
     else if(!prev_status && next_status){ 
-        //debug("PREV COALESCE NEEDED");  
-        ////debug("GOT ZERO LINE THROUGH PREV_STATUS COALESCE"); 
-        //sf_show_heap();    
-        ////debug("PRINTING PREVIOUS BLOCK PASSED IN");
-        //sf_show_block(prev); 
+	//We need to coalesce to the previous block and then edit the header and footer there 
         remove_from_free_list(prev);  
-        ////debug("GOT One LINE THROUGH PREV_STATUS COALESCE"); 
-        //We need to coalesce to the previous block and then edit the header and footer there 
         size_t prev_size = prev->header & ~0x1F;  
         new_size = prev_size + curr_block_size; 
         int prev_allocated_bit = (prev->header & 0x8) >> 3;  
         size_t packed = pack(new_size, 0, prev_allocated_bit);  
-        ////debug("GOT HALF WAY THROUGH PREV_STATUS COALESCE"); 
         curr_block = prev;  
         prev->header = packed; 
         sf_block * curr_block_footer = (sf_block *)((char *)curr_block + new_size - 8); 
@@ -263,49 +227,32 @@ sf_block *coalesce(sf_block * curr_block){
         sf_block * curr_block_nextHDR = (sf_block*)((char*)curr_block + new_size); 
         curr_block_nextHDR->header &= ~0x8;  
     } 
-    //curr_block will be the block we are adding... we can first see if it's wilderness or find it's regualr index 
+    //curr_block will be the block we are adding... we can first see if it's wilderness or find it's regular index 
     sf_block *final_next = (sf_block*) ((char*)curr_block + new_size); 
     if (final_next == sf_get_epilouge()){ 
         //wilderness so we add to free_list at that spot 
         add_to_free_list(curr_block, NUM_FREE_LISTS-1); 
     }else{  
         //debug("ADDING VIA COALESCE"); 
-        ////debug("%lu", new_size); 
         int index = determine_free_list_index(new_size); 
         add_to_free_list(curr_block, index); 
     }  
-    ////debug("Get's past first COALESCE?"); 
     return curr_block; 
-    //abort(); 
 }  
 //If the wilderness flag is 0, we know it's not a wilderness block so we'll do regular adding to heap 
-//If it is a wilderness block we just keep it into the wilderness_block
+//If it is a wilderness block we just keep it in the wilderness_block
 sf_block* split_block(sf_block *curr_block, size_t curr_size, size_t actual_size, int wilderness_flag){ 
-    //Split Block and change curr_bit to alloc and prev bit to alloc  
-    //Insert into lists normall if 0 wilderness flag, insert into wilderness if wilderness flag passed   
-    //Well we can actually check if it's at the wilderness block   
-    //First we get the difference between current size and actual size to rewrite the header  
-    //Left gets allocated with actual size, right gets allocated with the left over and then readded to free list  
-    //Left Block w/ no Footer since allocated!  
     size_t new_size_right = curr_size - actual_size;  
     int prev_alloc_bit_left = (curr_block->header & 0x8) >> 3;  
-    //int prev_alloc_bit_left = GET_PREV_ALLOC(curr_block);  
     curr_block->header = actual_size;  
     curr_block->header |= (1 << 4);
     curr_block->header |= (prev_alloc_bit_left << 3); 
-    //sf_show_block(curr_block); 
-    //Need to remove from free_list
-    //Right Block w/ Footer  
     sf_block * right_block_header = (sf_block *)((char*) curr_block + actual_size);  
     right_block_header->header = new_size_right; 
     right_block_header->header |= (0 << 4); 
     right_block_header->header |= (1 << 3);  
     sf_block * right_block_footer = (sf_block*)((char*) right_block_header + new_size_right - 8); 
     right_block_footer->header = right_block_header->header;   
-    //Now we need to add to free_list   
-    //This has two cases, we either add to wilderness or we don't 
-    //Add Wilderness Case:  
-    //debug("ADDING VIA SPLIT BLOCK"); 
     if(wilderness_flag){
         add_to_free_list(right_block_header, NUM_FREE_LISTS-1); 
     }else{
@@ -313,7 +260,6 @@ sf_block* split_block(sf_block *curr_block, size_t curr_size, size_t actual_size
         add_to_free_list(right_block_header, index); 
     }
     return curr_block; 
-    //abort(); 
 } 
   
 sf_block* allocate_from_free_list(size_t size, int index){  
@@ -322,22 +268,12 @@ sf_block* allocate_from_free_list(size_t size, int index){
     int not_found = 1;  
     int curr_list = index; 
     while(curr_list < 8){   
-        ////debug("Crashed AFTER ENTERING CURR_LIST_LOOP");  
         sf_block* curr_ptr = sf_free_list_heads[curr_list].body.links.next; 
         size_t curr_size = 0;     
-        //sf_show_free_lists();  
-        ////debug("%d", curr_list); 
         while(curr_ptr != &sf_free_list_heads[curr_list]){ 
             curr_size = GET_SIZE(curr_ptr); 
-            if(curr_size >= size){ 
-                ////debug("ENTERED CURR_SIZE CONDITION AND THEN CRASHED");
-                //Need to remove and return SF_BLOCK 
-                // sf_block* previous_node =  curr_ptr->body.links.prev; 
-                // sf_block* next_node = curr_ptr->body.links.next;   
-                // previous_node->body.links.next = next_node; 
-                // next_node->body.links.prev = previous_node;    
+            if(curr_size >= size){   
                 remove_from_free_list(curr_ptr); 
-                ////debug("Crashed After Remove_FROM_FREE_LIST");  
                 not_found = 0;  
                 first_fit_block = curr_ptr;   
                 if((curr_size - size) % 32 == 0 && curr_size - size != 0){
@@ -355,7 +291,6 @@ sf_block* allocate_from_free_list(size_t size, int index){
                 }
                 break;  
             }  
-            ////debug("PRINT HERE"); 
             curr_ptr = curr_ptr->body.links.next;  
         } 
         if(not_found == 0){break;} 
@@ -364,17 +299,7 @@ sf_block* allocate_from_free_list(size_t size, int index){
     if(not_found == 0){
         return first_fit_block; 
     }     
-    ////debug("REACHED TO MEM_GROW STAGE"); 
-    ///// CHECKING WILDERNESS BLOCK AFTER LOOKING THROUGH ENTIRE NORMAL FREE LIST /////   
-    //If it's not here then we need to look into SF_MEM_GROW LATER here until we can allocate 
-    //If there is no wilderness block you call SF_MEM_GROW, put in prolouge, overwrite epilouge with new header  
-    //Check if there's enough... 
-        //
-    //There is no thing and so you have to sf_Mem_grow 
-    //or there's not enough 
-    //if there is enough  
-    //You write the header, epilouge 
-    //Have to coalesce 
+
     //While loop and then return NULL if there's not enough   
     sf_block * curr_ptr = sf_free_list_heads[NUM_FREE_LISTS-1].body.links.next;  
     int sf_mem_grow_needed = 0;  
@@ -383,14 +308,11 @@ sf_block* allocate_from_free_list(size_t size, int index){
         sf_mem_grow_needed = 1; 
     }
     if(sf_mem_grow_needed == 0){  
-        ////debug("Reached memgrow_needed_second check"); 
         //We can check the size of the current wilderness block and make sure it's fine 
         size_t curr_size = curr_ptr->header & ~0x1F; 
         if(curr_size < size){ 
             sf_mem_grow_needed = 1; 
-            ////debug("Properly Recognized need for MEM_GROW"); 
         }else{   
-            ////debug("REACHED WITHOUT MEM_GROW");
             remove_from_free_list(curr_ptr); 
             if((curr_size - size)%32 == 0 && (curr_size - size != 0)){
                 first_fit_block = split_block(curr_ptr, curr_size, size, 1);
@@ -404,17 +326,13 @@ sf_block* allocate_from_free_list(size_t size, int index){
         }
     }  
     while(sf_mem_grow_needed){  
-        //sf_show_heap(); 
         //The previous epilouge is our new header  
         sf_block *prev_epilouge = sf_get_epilouge(); 
         char* ptr = sf_mem_grow(); 
         if(ptr == NULL){ 
             return NULL; 
         }    
-        ////debug("Got past inital setup to SF_MEM_GROW_LOOP");
         sf_block *new_epilouge = sf_get_epilouge(); 
-        ////debug("%p", new_epilouge);   
-        ////debug("%p", prev_epilouge);
         size_t epilouge_packed = pack(0, 1, 0); 
         new_epilouge->header = epilouge_packed;  
         sf_block *new_footer = (sf_block*)((char*)new_epilouge - 8); 
@@ -422,12 +340,8 @@ sf_block* allocate_from_free_list(size_t size, int index){
         size_t footer_packed = pack(2048, 0, prev_allocated_bit); 
         prev_epilouge->header = footer_packed;  
         new_footer->header = footer_packed;  
-        ////debug("Got past packing and footer setting"); 
-        //sf_show_heap(); 
         sf_block *new_header = coalesce(prev_epilouge);  
-        ////debug("CRASHES IN COALESCE"); 
         size_t new_size = new_header->header & ~0x1F; 
-        //sf_show_block(new_header); 
         if(new_size >= size){ 
             remove_from_free_list(new_header); 
             sf_mem_grow_needed = 0; 
@@ -443,24 +357,10 @@ sf_block* allocate_from_free_list(size_t size, int index){
         }
     }
     return first_fit_block; 
-    //abort();
 }
 
 void *sf_malloc(size_t size) {   
-    //Malloc has three cases to handle that we must implement 
-    /* 
-        1) The initial Call to Malloc which will set up our heap for the first time  
-        --> We want to make an init function and somehow track whether sf_malloc had already been called once: So global variable 
-        --> This has to only be done once and from then on it's the other two cases  
- 
-        2) We search the free lists, we find a suitable place to insert the payload and handle that   
-        --> Need to round block size and then search list, might want to consider just looking for next and previous block ptrs
-
-        3) There is not enough space, so we must call sf_memgrow, immediately coalesce and then try case 2 again or well... 
-        --> I guess it would be the wilderness block at that point
-    */ 
-    // To be implemented  
-    // Let's first handle the the request sizes, 0, negative, and then valid  
+    
     void * ret_ptr = NULL; 
     if (size == 0){
         return NULL; 
@@ -478,11 +378,7 @@ void *sf_malloc(size_t size) {
         }else{ 
             flag_initalized = 1; 
         }
-    } 
-    //Ok so ret_ptr rn is either pointing at the payload or it's null rn as we haven't found a space for it 
-    //Even if the size is greater than 0, we have to make sure to round if needed 
-    //We now need to round our size to a size of 32....  
-    //This is only thinking about the payload_size  
+    }  
     size_t adjusted_payload_size = size + 8;   
 
     if((adjusted_payload_size)%32 == 0){ 
@@ -493,7 +389,6 @@ void *sf_malloc(size_t size) {
 
     //Now need to find a free_block with this size
     int index = determine_free_list_index(adjusted_payload_size);   
-    ////debug("HERE"); 
     sf_block* payload_HDR = allocate_from_free_list(adjusted_payload_size, index);
     if(payload_HDR == NULL){
         sf_errno = ENOMEM; 
@@ -502,8 +397,6 @@ void *sf_malloc(size_t size) {
         return (void *) ((char*)payload_HDR + 8); 
     }  
     return NULL; 
-    //abort();  
-    // return NULL; 
 }
 
 void sf_free(void *pp) {
@@ -563,32 +456,21 @@ void sf_free(void *pp) {
     coalesce(pp_header); 
 }
 void *sf_split_realloc(sf_block* curr_block, size_t curr_size, size_t actual_size){
-    //We now need to make a general splitting function...  
     //This is a version of split for sf_realloc as it'll call coalesce immediately on the split and return the allocated block back
     size_t new_size_right = curr_size - actual_size;  
     int prev_alloc_bit_left = (curr_block->header & 0x8) >> 3;  
-    //int prev_alloc_bit_left = GET_PREV_ALLOC(curr_block);  
     curr_block->header = actual_size;  
     curr_block->header |= (1 << 4);
     curr_block->header |= (prev_alloc_bit_left << 3); 
-    //sf_show_block(curr_block); 
-    //Need to remove from free_list
-    //Right Block w/ Footer  
     sf_block * right_block_header = (sf_block *)((char*) curr_block + actual_size);  
     right_block_header->header = new_size_right; 
     right_block_header->header |= (0 << 4); 
     right_block_header->header |= (1 << 3);  
     sf_block * right_block_footer = (sf_block*)((char*) right_block_header + new_size_right - 8); 
     right_block_footer->header = right_block_header->header;   
-    //Now we need to add to free_list   
-    //This has two cases, we either add to wilderness or we don't 
-    //Add Wilderness Case:  
-    //debug("ADDING VIA SPLIT BLOCK");  
     coalesce(right_block_header); 
     return curr_block; 
-    //abort(); 
 }
-//In order to code_realloc the case of splitting an allocated block will be needed, more of a generic split I guess
 void *sf_realloc(void *pp, size_t rsize) {
     // To be implemented  
     //Time to do the same exact validty checks that we did in sf_free 
@@ -613,7 +495,7 @@ void *sf_realloc(void *pp, size_t rsize) {
         return NULL; 
     }    
     debug("CRASH HERE!");
-    //If the footer is after the epilouge or the header is before the prolouge
+    //If the footer is after the epilogue or the header is before the prologue
     sf_block* pp_footer = (sf_block *)((char*)pp + pp_header_size - 8);
     sf_block* curr_epilouge = sf_get_epilouge();
     sf_block* curr_prolouge = sf_get_prolouge();   
@@ -649,7 +531,7 @@ void *sf_realloc(void *pp, size_t rsize) {
     }  
     size_t required_size = rsize + 8;   
     if((required_size)%32 == 0){ 
-        //DO Nothing, otherwise we need to round up to the next 32 bit mulitple
+        //DO Nothing, otherwise we need to round up to the next 32 bit multiple
     }else{
         required_size += (32 - (required_size%32)); 
     } 
@@ -661,9 +543,6 @@ void *sf_realloc(void *pp, size_t rsize) {
         if(larger_block == NULL){
             return NULL; 
         }    
-        //sf_show_heap(); 
-        //sf_show_block((sf_block *)larger_block); 
-        //sf_show_block(pp); 
         //Step 2: Calling Memcpy to copy the data in the block given by the client to the block returned by sf_malloc 
         memcpy(larger_block, pp, pp_header_size-8);   
         //sf_show_block(larger_block); 
@@ -745,14 +624,6 @@ void *sf_memalign(size_t size, size_t align) {
         //rmbr pp is 8 ahead of it's header spot so we back up eight to get the new header 
         sf_block * new_pp_header = (sf_block*)((char*)pp - 8); 
         new_pp_header->header = new_pp_packed; 
-        //Now we just gotta edit the header size of our previous and then we can call sf_free on it! 
-        /*
-        int prev_alloc_bit_left = (curr_block->header & 0x8) >> 3;  
-        //int prev_alloc_bit_left = GET_PREV_ALLOC(curr_block);  
-        curr_block->header = actual_size;  
-        curr_block->header |= (1 << 4);
-        curr_block->header |= (prev_alloc_bit_left << 3); 
-        */ 
        int prev_alloc_bit_pp_header = get_prev_alloc_bit(pp_header); 
        size_t pp_packed = pack(split_size, 1, prev_alloc_bit_pp_header);  
        pp_header->header = pp_packed; 
